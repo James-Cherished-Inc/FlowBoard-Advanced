@@ -1,5 +1,6 @@
 
-Here’s a well-thought-out concept to visualize project ideas. The app will display projects in a vertical, block-based layout—**Done** on top, **Doing** below, and **To Do** at the bottom.
+Here’s a simpel concept to visualize project ideas.
+The app will display projects in a vertical, block-based layout—**Done** on top, **Doing** below, and **To Do** at the bottom.
 Each block will show project details in a clear and visually engaging way, with the ability to expand projects for more information and an option to share the entire list publicly.
 
 
