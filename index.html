@@ -48,6 +48,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -79,15 +80,15 @@
             return tagColors[hash % tagColors.length];
         };
 
-      const cardColor = project.status === 'doing' && project.tags.length > 0 
-        ? getTagColor(project.tags[0]) 
+      const cardColor = project.status === 'doing' && project.tags.length > 0
+        ? getTagColor(project.tags[0])
         : '#ffffff';
 
        return (
            <div className="mb-4">
                <div
-                 className="bg-white p-4 rounded-lg shadow-md border cursor-pointer"
-                 style={{ borderColor: project.status === 'done' ? '#10b981' : cardColor }}
+                 className="bg-white p-4 rounded-lg cursor-pointer"
+                 style={{ borderColor: project.status === 'done' ? '#10b981' : cardColor, borderWidth: '1px', borderStyle: 'solid' }}
                  onClick={() => onToggleExpand(project.id)}
              >
                  <div className="flex items-center justify-between">
@@ -114,7 +115,7 @@
                                    value={tempCompletionPercentage !== null ? tempCompletionPercentage : project.completion_percentage}
                                    onChange={(e) => setTempCompletionPercentage(Number(e.target.value))}
                                    className="w-full"
-                              />
+                               />
                               {tempCompletionPercentage !== null ? (
                                   <>
                                       <button
@@ -156,9 +157,9 @@
                                key={tag}
                                className="text-xs text-white px-2 py-1 rounded"
                                style={{ backgroundColor: getTagColor(tag) }}
-                           >
-                               {tag}
-                           </span>
+                            >
+                                {tag}
+                            </span>
                        ))}
                    </div>
                </div>
@@ -189,7 +190,7 @@
                                    <label className="block text-sm font-medium text-gray-700">Short Description</label>
                                    <textarea
                                        value={editProject.description}
-                                       onChange={(e) => setEditProject({ ...editProject, description: e.target.value })}
+                                       onChange={(e) => setDescription(e.target.value)}
                                        className="mt-1 p-2 w-full border rounded"
                                        rows="3"
                                        required
@@ -468,98 +469,122 @@
          });
        };
 
-      const blocks = [
-        { status: 'done', title: 'Done', bgColor: 'bg-green-100', headerColor: 'bg-green-500' },
-        { status: 'doing', title: 'Doing', bgColor: 'bg-blue-100', headerColor: 'bg-blue-500' },
-        { status: 'to do', title: 'To Do', bgColor: 'bg-gray-100', headerColor: 'bg-gray-500' },
-      ];
+       const exportAsPdf = () => {
+         const board = document.querySelector('#ideaFlowBoard');
+         window.html2canvas(board).then((canvas) => {
+           const imgData = canvas.toDataURL('image/png');
+           const pdf = new window.jspdf.jsPDF({
+             orientation: 'p', // Portrait
+             unit: 'px',
+             format: [canvas.width, canvas.height] // Use canvas dimensions
+           });
 
-      return (
-        <div className="container mx-auto p-4 max-w-3xl">
-          <h1 className="text-2xl font-bold mb-4">IdeaFlow</h1>
-          <div className="mb-4 flex space-x-2">
-            <button
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              onClick={() => setShowForm(true)}
-            >
-              Add Idea
-            </button>
-            <button
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              onClick={exportAsJpg}
-            >
-              Export as JPG
-            </button>
-            <button
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              onClick={() => {
-                const element = document.createElement("a");
-                const file = new Blob(
-                  [JSON.stringify(projects)],
-                  {type: 'application/json'}
-                );
-                element.href = URL.createObjectURL(file);
-                element.download = "ideaFlowBoard.json";
-                document.body.appendChild(element); // Required for this to work in FireFox
-                element.click();
-              }}
-            >
-              Export Board (JSON)
-            </button>
-            <button
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              onClick={() => document.getElementById('importFile').click()}
-            >
-              Import Board (JSON)
-            </button>
-            <input type="file" id="importFile" accept=".json" style={{display: "none"}} onChange={(event) => {
-              const file = event.target.files[0];
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                const json = JSON.parse(event.target.result);
-                if (window.confirm("Importing will overwrite your current board data. Are you sure?")) {
-                  setProjects(json);
-                }
-              }
-              reader.readAsText(file);
-            }}/>
-          </div>
-          <div id="ideaFlowBoard">
-            {blocks.map((block) => (
-              <div key={block.status} className={`mb-6 p-4 rounded-lg ${block.bgColor}`}>
-                <h2 className={`text-xl font-semibold text-white p-2 rounded ${block.headerColor}`}>
-                  {block.title}
-                </h2>
-                <div className="mt-4">
-                  {projects
-                    .filter((p) => p.status === block.status)
-                    .map((project) => (
-                      <ProjectCard
-                        key={project.id}
-                        project={project}
-                        onToggleExpand={toggleExpand}
-                        isExpanded={expandedProjects[project.id]}
-                        onCompletionChange={handleCompletionChange}
-                        onDeleteProject={deleteProject}
-                        onUpdateProject={updateProject}
-                      />
-                    ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          {showForm && (
-            <AddIdeaForm
-              onAddProject={addProject}
-              onClose={() => setShowForm(false)}
-            />
-          )}
-        </div>
-      );
-    };
+           pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+           pdf.save('IdeaFlow-Board.pdf');
+         });
+       };
 
-    // Render the app
-    ReactDOM.render(<App />, document.getElementById('root'));
+       const blocks = [
+         { status: 'done', title: 'Done', bgColor: 'bg-green-100', headerColor: 'bg-green-500' },
+         { status: 'doing', title: 'Doing', bgColor: 'bg-blue-100', headerColor: 'bg-blue-500' },
+         { status: 'to do', title: 'To Do', bgColor: 'bg-gray-100', headerColor: 'bg-gray-500' },
+       ];
+
+       return (
+         <div className="container mx-auto p-4 max-w-3xl">
+           <h1 className="text-2xl font-bold mb-4">IdeaFlow</h1>
+           <div className="mb-4 flex items-center">
+             <button
+               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mr-auto"
+               onClick={() => setShowForm(true)}
+             >
+               Add Idea
+             </button>
+             <div className="flex space-x-2 mx-auto">
+               <button
+                 className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                 onClick={() => {
+                   const element = document.createElement("a");
+                   const file = new Blob(
+                     [JSON.stringify(projects)],
+                     {type: 'application/json'}
+                   );
+                   element.href = URL.createObjectURL(file);
+                   element.download = "ideaFlowBoard.json";
+                   document.body.appendChild(element); // Required for this to work in FireFox
+                   element.click();
+                 }}
+               >
+                 Export Board (JSON)
+               </button>
+               <button
+                 className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                 onClick={() => document.getElementById('importFile').click()}
+               >
+                 Import Board (JSON)
+               </button>
+             </div>
+             <button
+               className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 ml-auto"
+               onClick={exportAsJpg}
+             >
+               JPG
+             </button>
+             {/* Add PDF Export Button */}
+             <button
+               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 ml-2"
+               onClick={exportAsPdf}
+             >
+               PDF
+             </button>
+             <input type="file" id="importFile" accept=".json" style={{display: "none"}} onChange={(event) => {
+               const file = event.target.files[0];
+               const reader = new FileReader();
+               reader.onload = (event) => {
+                 const json = JSON.parse(event.target.result);
+                 if (window.confirm("Importing will overwrite your current board data. Are you sure?")) {
+                   setProjects(json);
+                 }
+               }
+               reader.readAsText(file);
+             }}/>
+           </div>
+           <div id="ideaFlowBoard">
+             {blocks.map((block) => (
+               <div key={block.status} className={`mb-6 p-4 rounded-lg ${block.bgColor}`}>
+                 <h2 className={`text-xl font-semibold text-white p-2 rounded ${block.headerColor}`}>
+                   {block.title}
+                 </h2>
+                 <div className="mt-4">
+                   {projects
+                     .filter((p) => p.status === block.status)
+                     .map((project) => (
+                       <ProjectCard
+                         key={project.id}
+                         project={project}
+                         onToggleExpand={toggleExpand}
+                         isExpanded={expandedProjects[project.id]}
+                         onCompletionChange={handleCompletionChange}
+                         onDeleteProject={deleteProject}
+                         onUpdateProject={updateProject}
+                       />
+                     ))}
+                 </div>
+               </div>
+             ))}
+           </div>
+           {showForm && (
+             <AddIdeaForm
+               onAddProject={addProject}
+               onClose={() => setShowForm(false)}
+             />
+           )}
+         </div>
+       );
+     };
+
+     // Render the app
+     ReactDOM.render(<App />, document.getElementById('root'));
   </script>
 </body>
 </html>
